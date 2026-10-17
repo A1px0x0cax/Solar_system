@@ -82,7 +82,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-
+function logTex() { /* 빈 함수: 아무것도 하지 않음 */ }
+// ========== 1. 기본 씬 ==========
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 12000);
 camera.position.set(0, 280, 500);
