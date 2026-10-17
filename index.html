@@ -161,10 +161,12 @@ async function fetchDirectoryListing(url) {
   }
 }
 
-async function autoDetectTextures() {
-  // 주소창의 경로를 가져와서 절대 경로로 만듭니다.
-  const currentPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-  const texDir = currentPath + 'textures/';
+// 기존 코드
+const currentPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+const texDir = currentPath + 'textures/';
+
+// 수정할 코드 (그냥 무조건 현재 주소 기준 상대경로로 찾게 만듭니다)
+const texDir = './textures/';
   
   const files = await fetchDirectoryListing(texDir);
   
