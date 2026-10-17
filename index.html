@@ -49,7 +49,6 @@
 <div id="info">
   <div>Simulation Time (北京): <span id="time-display">--</span></div>
 </div>
-<div id="tex-status">Texture Loading</div>
 <div id="controls">
   <label><input type="checkbox" id="toggleOrbits" checked> Orbiter</label>
   <label><input type="checkbox" id="toggleLabels" checked>Planet Name</label>
@@ -83,24 +82,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-// ========== 0. 상태 표시 ==========
-const statusEl = document.getElementById('tex-status');
-const texLog = [];
-function logTex(name, ok, detail) {
-  texLog.push({ name, ok, detail });
-  renderStatus();
-}
-function renderStatus() {
-  const okCount = texLog.filter(t => t.ok).length;
-  const failCount = texLog.length - okCount;
-  const lines = texLog.map(t =>
-    `<span class="${t.ok ? 'ok' : 'fail'}">${t.ok ? '✓' : '✗'}</span> ${t.name} <span style="opacity:0.6">${t.detail || ''}</span>`
-  );
-  statusEl.innerHTML = `상태: ${okCount}개 성공 / ${failCount}개 실패<br><hr style="border-color:#444">` + lines.join('<br>');
-}
-statusEl.innerHTML = '텍스처 로딩 시작...';
 
-// ========== 1. 기본 씬 ==========
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 12000);
 camera.position.set(0, 280, 500);
@@ -366,7 +348,7 @@ loadTexture('moon', (tex) => {
 });
 
 const moonDiv = document.createElement('div');
-moonDiv.textContent = '달';
+moonDiv.textContent = 'Moon';
 moonDiv.style.cssText = 'color:#ccc;font-size:9px;text-shadow:0 0 3px #000;opacity:0.8;';
 const moonLabel = new CSS2DObject(moonDiv);
 moonLabel.position.set(0, 1.4, 0);
