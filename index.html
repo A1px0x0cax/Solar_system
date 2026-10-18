@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Solar-System</title>
+<title>3D Solar System</title>
 <style>
   body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
   canvas { display: block; }
@@ -19,7 +19,7 @@
     padding: 10px; border-radius: 6px; max-width: 350px;
     line-height: 1.4; pointer-events: none; max-height: 250px; overflow-y: auto;
     border: 1px solid #444; z-index: 10;
-    display: none; /* 기본적으로 숨김! */
+    display: block; /* 기본으로 켜둡니다 */
   }
   #tex-status .ok { color: #6f6; }
   #tex-status .fail { color: #f66; }
@@ -72,11 +72,6 @@
       <button data-speed="2592000">1 Month/s</button>
     </div>
   </div>
-  
-  <div class="time-section">
-    <!-- 상태 보기 토글 버튼 -->
-    <button id="toggleStatusBtn" style="background:#444; margin-top:5px;">Show Status</button>
-  </div>
 </div>
 
 <script type="importmap">
@@ -95,16 +90,6 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 
 // ========== 0. Status UI ==========
 const statusEl = document.getElementById('tex-status');
-const toggleStatusBtn = document.getElementById('toggleStatusBtn');
-let statusVisible = false;
-
-toggleStatusBtn.addEventListener('click', () => {
-  statusVisible = !statusVisible;
-  statusEl.style.display = statusVisible ? 'block' : 'none';
-  toggleStatusBtn.textContent = statusVisible ? 'Hide Status' : 'Show Status';
-  toggleStatusBtn.style.background = statusVisible ? '#555' : '#444';
-});
-
 const texLog = [];
 function logTex(name, ok, detail) {
   texLog.push({ name, ok, detail });
@@ -164,40 +149,49 @@ scene.add(sunLight);
   scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: true })));
 })();
 
-// ========== 3. Texture Loader ==========
+// ========== 3. Ultimate Texture Loader ==========
 const texLoader = new THREE.TextureLoader();
 texLoader.crossOrigin = 'anonymous';
 
 const textureNames = {
-  sun: 'sun.jpg',
-  mercury: 'mercury.jpg',
-  venus: 'venus.jpg',
-  earth: 'earth.jpg',
-  mars: 'mars.jpg',
-  jupiter: 'jupiter.jpg',
-  saturn: 'saturn.jpg',
-  saturn_ring: 'saturn_ring.png',
-  uranus: 'uranus.jpg',
-  neptune: 'neptune.jpg',
-  moon: 'moon.jpg'
+  sun: 'sun', mercury: 'mercury', venus: 'venus', earth: 'earth', mars: 'mars',
+  jupiter: 'jupiter', saturn: 'saturn', saturn_ring: 'saturn_ring', uranus: 'uranus',
+  neptune: 'neptune', moon: 'moon'
 };
 
 function loadTexture(nameKey, onLoaded) {
-  const filename = textureNames[nameKey];
-  const url = './textures' + filename; 
+  const baseName = textureNames[nameKey];
+  // 대소문자 및 다양한 확장자 총동원
+  const exts = ['jpg', 'JPG', 'png', 'PNG', 'jpeg', 'JPEG', 'webp', 'WEBP'];
+  let success = false;
   
-  texLoader.load(
-    url,
-    (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      logTex(nameKey, true, `→ ${filename}`);
-      if (onLoaded) onLoaded(tex);
-    },
-    undefined,
-    () => {
-      logTex(nameKey, false, `Not found: ${filename}`);
+  function tryNext(index) {
+    if (success || index >= exts.length) {
+      if (!success) logTex(nameKey, false, `All failed`);
+      return;
     }
-  );
+    
+    const filename = `${baseName}.${exts[index]}`;
+    // 경로: ./textures/파일명.jpg
+    // 캐시 방지를 위해 뒤에 ?t=시간 을 붙입니다.
+    const url = `./textures/${filename}?t=${new Date().getTime()}`;
+    
+    texLoader.load(
+      url,
+      (tex) => {
+        if (success) return; 
+        success = true;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        logTex(nameKey, true, `→ ${filename}`);
+        if (onLoaded) onLoaded(tex);
+      },
+      undefined,
+      () => {
+        tryNext(index + 1); // 실패 시 다음 확장자
+      }
+    );
+  }
+  tryNext(0);
 }
 
 // ========== 4. Sun ==========
