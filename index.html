@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3D Solar System</title>
+<title>Solar-System</title>
 <style>
   body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
   canvas { display: block; }
@@ -51,7 +51,6 @@
   <div>Simulation Time (Beijing): <span id="time-display">--</span></div>
 </div>
 
-<!-- 상태 창 (기본 숨김) -->
 <div id="tex-status">Loading textures...</div>
 
 <div id="controls">
@@ -185,7 +184,7 @@ const textureNames = {
 
 function loadTexture(nameKey, onLoaded) {
   const filename = textureNames[nameKey];
-  const url = './' + filename; 
+  const url = './textures' + filename; 
   
   texLoader.load(
     url,
