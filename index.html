@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Solar-System</title>
+<title>3D Solar System</title>
 <style>
   body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
   canvas { display: block; }
@@ -19,6 +19,7 @@
     padding: 10px; border-radius: 6px; max-width: 350px;
     line-height: 1.4; pointer-events: none; max-height: 250px; overflow-y: auto;
     border: 1px solid #444; z-index: 10;
+    display: none; /* 기본적으로 숨김! */
   }
   #tex-status .ok { color: #6f6; }
   #tex-status .fail { color: #f66; }
@@ -47,24 +48,35 @@
 </head>
 <body>
 <div id="info">
-  <div>Simulation Time (北京): <span id="time-display">--</span></div>
+  <div>Simulation Time (Beijing): <span id="time-display">--</span></div>
 </div>
+
+<!-- 상태 창 (기본 숨김) -->
+<div id="tex-status">Loading textures...</div>
+
 <div id="controls">
-  <label><input type="checkbox" id="toggleOrbits" checked> Orbiter</label>
-  <label><input type="checkbox" id="toggleLabels" checked>Planet Name</label>
-  <label><input type="checkbox" id="toggleMoonOrbit" checked> Lunar Orbit</label>
+  <label><input type="checkbox" id="toggleOrbits" checked> Orbits</label>
+  <label><input type="checkbox" id="toggleLabels" checked> Labels</label>
+  <label><input type="checkbox" id="toggleMoonOrbit" checked> Moon Orbit</label>
+  
   <div class="time-section">
-    <div style="margin-bottom:6px;font-weight:bold;">Time adjust</div>
+    <div style="margin-bottom:6px;font-weight:bold;">Time Control</div>
     <input type="datetime-local" id="timeInput" step="1">
-    <button id="applyTime">Apply</button>
-    <button id="resetTime">Reset</button>
-    <div style="margin-top:10px;font-weight:bold;">Time</div>
+    <button id="applyTime">Apply Time</button>
+    <button id="resetTime">Reset to Now</button>
+    
+    <div style="margin-top:10px;font-weight:bold;">Time Speed</div>
     <div id="speed-row">
       <button data-speed="0">Pause</button>
       <button data-speed="1">1x</button>
-      <button data-speed="86400">1 days/s</button>
-      <button data-speed="2592000">1 Months/s</button>
+      <button data-speed="86400">1 Day/s</button>
+      <button data-speed="2592000">1 Month/s</button>
     </div>
+  </div>
+  
+  <div class="time-section">
+    <!-- 상태 보기 토글 버튼 -->
+    <button id="toggleStatusBtn" style="background:#444; margin-top:5px;">Show Status</button>
   </div>
 </div>
 
@@ -82,8 +94,33 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-function logTex() { /* 빈 함수: 아무것도 하지 않음 */ }
-// ========== 1. 기본 씬 ==========
+// ========== 0. Status UI ==========
+const statusEl = document.getElementById('tex-status');
+const toggleStatusBtn = document.getElementById('toggleStatusBtn');
+let statusVisible = false;
+
+toggleStatusBtn.addEventListener('click', () => {
+  statusVisible = !statusVisible;
+  statusEl.style.display = statusVisible ? 'block' : 'none';
+  toggleStatusBtn.textContent = statusVisible ? 'Hide Status' : 'Show Status';
+  toggleStatusBtn.style.background = statusVisible ? '#555' : '#444';
+});
+
+const texLog = [];
+function logTex(name, ok, detail) {
+  texLog.push({ name, ok, detail });
+  renderStatus();
+}
+function renderStatus() {
+  const okCount = texLog.filter(t => t.ok).length;
+  const failCount = texLog.length - okCount;
+  const lines = texLog.map(t =>
+    `<span class="${t.ok ? 'ok' : 'fail'}">${t.ok ? '✓' : '✗'}</span> ${t.name} <span style="opacity:0.6">${t.detail || ''}</span>`
+  );
+  statusEl.innerHTML = `Status: ${okCount} OK / ${failCount} Failed<br><hr style="border-color:#444">` + lines.join('<br>');
+}
+
+// ========== 1. Scene Setup ==========
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 12000);
 camera.position.set(0, 280, 500);
@@ -111,7 +148,7 @@ scene.add(new THREE.AmbientLight(0x555555, 1.5));
 const sunLight = new THREE.PointLight(0xffffff, 2.5, 0, 0.4);
 scene.add(sunLight);
 
-// ========== 2. 별 배경 ==========
+// ========== 2. Starfield ==========
 (function starfield() {
   const geo = new THREE.BufferGeometry();
   const count = 8000;
@@ -128,7 +165,7 @@ scene.add(sunLight);
   scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: true })));
 })();
 
-// ========== 3. 텍스처 로더 (깃허브용: 무조건 지정된 이름으로 바로 시도) ==========
+// ========== 3. Texture Loader ==========
 const texLoader = new THREE.TextureLoader();
 texLoader.crossOrigin = 'anonymous';
 
@@ -140,7 +177,7 @@ const textureNames = {
   mars: 'mars.jpg',
   jupiter: 'jupiter.jpg',
   saturn: 'saturn.jpg',
-  saturn_ring: 'saturn_ring.png', 
+  saturn_ring: 'saturn_ring.png',
   uranus: 'uranus.jpg',
   neptune: 'neptune.jpg',
   moon: 'moon.jpg'
@@ -148,7 +185,7 @@ const textureNames = {
 
 function loadTexture(nameKey, onLoaded) {
   const filename = textureNames[nameKey];
-  const url = './textures/' + filename; // 깃허브의 textures 폴더에서 찾음
+  const url = './' + filename; 
   
   texLoader.load(
     url,
@@ -159,12 +196,12 @@ function loadTexture(nameKey, onLoaded) {
     },
     undefined,
     () => {
-      logTex(nameKey, false, `파일 없음 (${filename})`);
+      logTex(nameKey, false, `Not found: ${filename}`);
     }
   );
 }
 
-// ========== 4. 태양 ==========
+// ========== 4. Sun ==========
 const SUN_RADIUS = 12;
 const sunMat = new THREE.MeshStandardMaterial({
   color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0.8,
@@ -192,6 +229,7 @@ loadTexture('sun', (tex) => {
   sunMat.map = tex; sunMat.color.set(0xffffff); sunMat.emissiveMap = tex; sunMat.needsUpdate = true;
 });
 
+// ========== 5. Planet Data ==========
 const planetsData = [
   { name:'Mercury', textureKey:'mercury', fallback:0xb0a99f, size:1.2,
     a:0.38709927, e:0.20563593, I:7.00497902, L:252.25032350, w_bar:77.45779628, Omega:48.33076593,
@@ -219,11 +257,11 @@ const planetsData = [
     ra:0.00026291, re:0.00005105, rI:0.00035372, rL:218.45945325, rw:-0.32241464, rO:-0.00508664 },
 ];
 
-// ========== 6. 궤도 거리 압축 ==========
+// ========== 6. Orbit Scale ==========
 const ORBIT_SCALE = 32;
 function auToScene(au) { return Math.sqrt(au) * ORBIT_SCALE; }
 
-// ========== 7. 시간 계산 ==========
+// ========== 7. Time Logic ==========
 function getBeijingDate() {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
 }
@@ -272,7 +310,7 @@ function auVecToScene(x, y, z) {
   return new THREE.Vector3(x * scale, z * scale, y * scale);
 }
 
-// ========== 8. 메인 초기화 ==========
+// ========== 8. Build System ==========
 const planets = [];
 const orbitLines = [];
 const labelObjects = [];
@@ -338,7 +376,7 @@ planetsData.forEach(data => {
   planets.push({ data, mesh, label });
 });
 
-// 달
+// Moon
 const moonMesh = new THREE.Mesh(
   new THREE.SphereGeometry(0.7, 32, 32),
   new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.95 })
@@ -368,11 +406,11 @@ const moonOrbitLine = new THREE.Line(
 );
 scene.add(moonOrbitLine);
 
-// 위치 업데이트
+// Position Update
 const earthPos = new THREE.Vector3();
 function updatePositions() {
   const now = simDate;
-  document.getElementById('time-display').textContent = now.toLocaleString('ko-KR', {
+  document.getElementById('time-display').textContent = now.toLocaleString('en-US', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   });
@@ -395,7 +433,7 @@ function updatePositions() {
   moonOrbitLine.rotation.x = moonTilt;
 }
 
-// UI 이벤트
+// UI Events
 const timeInput = document.getElementById('timeInput');
 function syncTimeInput() {
   const d = simDate;
@@ -438,7 +476,7 @@ document.getElementById('toggleMoonOrbit').addEventListener('change', e => {
 syncTimeInput();
 updatePositions();
 
-// 애니메이션 루프
+// Animation Loop
 let uiAccum = 0;
 const clock = new THREE.Clock();
 function animate() {
